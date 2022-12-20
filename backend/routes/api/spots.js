@@ -38,6 +38,29 @@ const validateSpot = [
     handleValidationErrors
 ];
 
+router.get('/current', requireAuth, async (req, res) => {
+    const Spots = await Spot.findAll({
+        where: {
+            ownerId: req.user.id
+        }
+    });
+    for (const spot of Spots) {
+        const spotImg = await SpotImage.findOne({
+            where: {
+                spotId: spot.dataValues.id
+            }
+        });
+        const spotRating = await Review.findOne({
+            where: {
+                spotId: spot.dataValues.id
+            }
+        });
+        spot.dataValues.avgRating = spotRating.dataValues.stars
+        spot.dataValues.previewImage = spotImg.dataValues.url
+    }
+    res.json({ Spots });
+})
+
 router.post('/:spotId/images', requireAuth, async (req, res) => {
     const { id, url, preview } = req.body;
     const foundSpot = await Spot.findByPk(req.params.spotId);
@@ -46,8 +69,7 @@ router.post('/:spotId/images', requireAuth, async (req, res) => {
             url: url,
             preview: preview
         })
-        const foundNewSpot = await SpotImage.findByPk(newSpotImg.id);
-        res.json(foundNewSpot);
+        res.json(newSpotImg.toSafeObject());
     } else {
         res.json({
             "message": "Spot couldn't be found",
@@ -62,20 +84,25 @@ router.get('/:spotId', async (req, res) => {
             spotId: req.params.spotId
         }
     })
-    logging: console.log(count, rows)
     const foundSpot = await Spot.findByPk(req.params.spotId, {
-        numReviews: count,
-        avgStarRating: rows,
-        include: [{
-            model: SpotImage,
-            spotId: req.params.spotId
-        },
-        {
-            model: User,
-            as: 'Owner'
-        }]
+        include: [
+            {
+                model: SpotImage.scope('clean'),
+                spotId: req.params.spotId
+            },
+            {
+                model: User.scope('owner'),
+                as: 'Owner',
+            }],
     });
-    res.json(foundSpot);
+    if (foundSpot) {
+        foundSpot.dataValues.numReviews = count;
+        foundSpot.dataValues.avgStarRating = rows[0].dataValues.stars;
+        res.json(foundSpot);
+    } else {
+        res.statusCode = 404;
+        res.json({ message: "Spot couldn't be found", statusCode: 404 })
+    }
 });
 
 router.put('/:spotId', requireAuth, validateSpot, async (req, res,) => {
@@ -136,8 +163,35 @@ router.post('/', requireAuth, validateSpot, async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
-    const allSpots = await Spot.findAll();
-    res.json(allSpots);
+    let { page, size, minLat, maxLat, minLng, maxLng, minPrice, maxPrice } = req.params;
+
+    page = parseInt(page);
+    size = parseInt(size);
+
+    if (Number.isNaN(page)) page = 1;
+    if (Number.isNaN(size)) size = 20;
+    if (page > 10) size = 10;
+    if (size > 20) size = 20;
+
+    const Spots = await Spot.findAll({
+        limit: size,
+        offset: (page - 1) * size
+    });
+    for (const spot of Spots) {
+        const spotImg = await SpotImage.findOne({
+            where: {
+                spotId: spot.dataValues.id
+            }
+        });
+        const spotRating = await Review.findOne({
+            where: {
+                spotId: spot.dataValues.id
+            }
+        });
+        spot.dataValues.avgRating = spotRating.dataValues.stars
+        spot.dataValues.previewImage = spotImg.dataValues.url
+    }
+    res.json({ Spots, page, size });
 });
 
 module.exports = router;
