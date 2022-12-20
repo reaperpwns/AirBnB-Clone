@@ -39,15 +39,15 @@ const validateSpot = [
 ];
 
 router.post('/:spotId/images', requireAuth, async (req, res) => {
-    const { url, preview } = req.body;
+    const { id, url, preview } = req.body;
     const foundSpot = await Spot.findByPk(req.params.spotId);
     if (foundSpot && foundSpot.ownerId === req.user.id) {
         const newSpotImg = await SpotImage.create({
-            spotId: req.params.spotId,
             url: url,
             preview: preview
         })
-        res.json(newSpotImg);
+        const foundNewSpot = await SpotImage.findByPk(newSpotImg.id);
+        res.json(foundNewSpot);
     } else {
         res.json({
             "message": "Spot couldn't be found",
@@ -57,13 +57,15 @@ router.post('/:spotId/images', requireAuth, async (req, res) => {
 });
 
 router.get('/:spotId', async (req, res) => {
-    const allReviews = await Review.findAll({
+    const { count, rows } = await Review.findAndCountAll({
         where: {
-            spotId: req.params.spotId,
+            spotId: req.params.spotId
         }
-    });
-    logging: console.log(allReviews);
+    })
+    logging: console.log(count, rows)
     const foundSpot = await Spot.findByPk(req.params.spotId, {
+        numReviews: count,
+        avgStarRating: rows,
         include: [{
             model: SpotImage,
             spotId: req.params.spotId
