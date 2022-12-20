@@ -25,7 +25,14 @@ module.exports = (sequelize, DataTypes) => {
       references: { model: 'User' }
     },
     review: DataTypes.STRING,
-    stars: DataTypes.INTEGER
+    stars: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      validate: {
+        min: 1,
+        max: 5
+      }
+    }
   }, {
     sequelize,
     modelName: 'Review',
