@@ -78,6 +78,33 @@ router.delete('/:reviewId', requireAuth, async (req, res) => {
             "statusCode": 404
         })
     }
-})
+});
+
+router.get('/current', requireAuth, async (req, res) => {
+    const Reviews = await Review.findAll({
+        where: {
+            userId: req.user.id
+        },
+        include: [{
+            model: User.scope('owner')
+        },
+        {
+            model: Spot,
+            attributes: { exclude: ['description', 'updatedAt', 'createdAt'] }
+        },
+        {
+            model: ReviewImage.scope('clean')
+        }],
+    });
+    for (const Review of Reviews) {
+        const imageUrl = await SpotImage.findOne({
+            where: {
+                spotId: Review.dataValues.Spot.id
+            }
+        })
+        Review.dataValues.Spot.dataValues.previewImage = imageUrl.url
+    }
+    res.json({ Reviews });
+});
 
 module.exports = router;
