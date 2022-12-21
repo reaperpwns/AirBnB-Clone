@@ -162,14 +162,34 @@ router.post('/', requireAuth, validateSpot, async (req, res) => {
     return res.json(newSpot);
 });
 
-router.get('/', async (req, res) => {
-    let { page, size, minLat, maxLat, minLng, maxLng, minPrice, maxPrice } = req.params;
+router.get('/', handleValidationErrors, async (req, res, next) => {
+    let { page, size } = req.query;
+    const errors = {
+        page: "Page must be greater than or equal to 1",
+        size: "Size must be greater than or equal to 1"
+    };
 
     page = parseInt(page);
     size = parseInt(size);
 
     if (Number.isNaN(page)) page = 1;
     if (Number.isNaN(size)) size = 20;
+    if (page < 1) {
+        res.statusCode = 400;
+        res.json({
+            message: "Validation Error",
+            statusCode: 400,
+            error: errors.page
+        })
+    };
+    if (size < 1) {
+        res.statusCode = 400;
+        res.json({
+            message: "Validation Error",
+            statusCode: 400,
+            error: errors.size
+        })
+    };
     if (page > 10) size = 10;
     if (size > 20) size = 20;
 
