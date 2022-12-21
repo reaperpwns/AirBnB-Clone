@@ -130,7 +130,6 @@ router.put('/:spotId', requireAuth, validateSpot, async (req, res,) => {
 
 router.delete('/:spotId', requireAuth, async (req, res) => {
     const foundSpot = await Spot.findByPk(req.params.spotId);
-    logging: console.log(foundSpot)
     if (foundSpot && foundSpot.ownerId === req.user.id) {
         await foundSpot.destroy();
         res.json({
@@ -138,6 +137,7 @@ router.delete('/:spotId', requireAuth, async (req, res) => {
             "statusCode": 200
         })
     } else {
+        res.statusCode = 404;
         res.json({
             "message": "Spot couldn't be found",
             "statusCode": 404
@@ -163,33 +163,81 @@ router.post('/', requireAuth, validateSpot, async (req, res) => {
 });
 
 router.get('/', handleValidationErrors, async (req, res, next) => {
-    let { page, size } = req.query;
+    let { page, size, maxLat, minLat, minLng, maxLng, minPrice, maxPrice } = req.query;
     const errors = {
         page: "Page must be greater than or equal to 1",
-        size: "Size must be greater than or equal to 1"
+        size: "Size must be greater than or equal to 1",
+        maxLat: "Maximum latitude is invalid",
+        minLat: "Minimum latitude is invalid",
+        minLng: "Maximum longitude is invalid",
+        maxLng: "Minimum longitude is invalid",
+        minPrice: "Maximum price must be greater than or equal to 0",
+        maxPrice: "Minimum price must be greater than or equal to 0"
     };
 
     page = parseInt(page);
     size = parseInt(size);
+    maxLat = parseFloat(maxLat);
+    minLat = parseFloat(minLat);
+    minLng = parseFloat(minLng);
+    maxLng = parseFloat(maxLng);
+    minPrice = parseInt(minPrice);
+    maxPrice = parseInt(maxPrice);
+
+    console.log(maxLat)
 
     if (Number.isNaN(page)) page = 1;
     if (Number.isNaN(size)) size = 20;
-    if (page < 1) {
-        res.statusCode = 400;
-        res.json({
-            message: "Validation Error",
-            statusCode: 400,
-            error: errors.page
-        })
-    };
-    if (size < 1) {
-        res.statusCode = 400;
-        res.json({
-            message: "Validation Error",
-            statusCode: 400,
-            error: errors.size
-        })
-    };
+    // if (page < 1) {
+    //     res.statusCode = 400;
+    //     res.json({
+    //         message: "Validation Error",
+    //         statusCode: 400,
+    //         error: errors.page
+    //     })
+    // };
+    // if (size < 1) {
+    //     res.statusCode = 400;
+    //     res.json({
+    //         message: "Validation Error",
+    //         statusCode: 400,
+    //         error: errors.size
+    //     })
+    // };
+    // if (maxLat) {
+    //     if (Number.isNaN(maxLat)) {
+    //         res.statusCode = 400;
+    //         res.json({
+    //             message: "Validation Error",
+    //             statusCode: 400,
+    //             error: errors.maxLat
+    //         })
+    //     };
+    // }
+    // if (Number.isNaN(minLat)) {
+    //     res.statusCode = 400;
+    //     res.json({
+    //         message: "Validation Error",
+    //         statusCode: 400,
+    //         error: errors.minLat
+    //     })
+    // };
+    // if (minLng && minLng === '') {
+    //     res.statusCode = 400;
+    //     res.json({
+    //         message: "Validation Error",
+    //         statusCode: 400,
+    //         error: errors.minLng
+    //     })
+    // };
+    // if (maxLng && maxLng === '') {
+    //     res.statusCode = 400;
+    //     res.json({
+    //         message: "Validation Error",
+    //         statusCode: 400,
+    //         error: errors.maxLng
+    //     })
+    // };
     if (page > 10) size = 10;
     if (size > 20) size = 20;
 
