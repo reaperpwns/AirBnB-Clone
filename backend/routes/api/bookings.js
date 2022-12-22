@@ -5,26 +5,54 @@ const { check } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
 const { requireAuth } = require('../../utils/auth');
 
-const validation = [
-    check('startDate')
-        .isAfter()
-        .withMessage("Start date conflicts with an existing booking"),
-    check('endDate')
-        .isBefore('startDate')
-        .withMessage("endDate cannot come before startDate"),
-    handleValidationErrors
-];
+router.get('/current', requireAuth, async (req, res) => {
+    const Bookings = await Booking.findAll({
+        where: {
+            userId: req.user.id
+        },
+        include: {
+            model: Spot,
+            attributes: {
+                exclude: ['updatedAt', 'createdAt']
+            }
+        }
+    });
+    for (let spot of Bookings) {
+        const foundImg = await SpotImage.findByPk(spot.dataValues.Spot.id);
+        spot.dataValues.Spot.dataValues.previewImage = foundImg.url;
+    }
+    res.json({ Bookings });
+});
 
-router.put('/:bookingId', requireAuth, validation, async (req, res) => {
+router.put('/:bookingId', requireAuth, async (req, res) => {
     const { startDate, endDate } = req.body;
     const endDateCheck = new Date(`${endDate}`);
-    if (endDateCheck.getTime() < Date.now()) {
+    const startDateCheck = new Date(`${startDate}`);
+    const allDates = await Booking.findAll({
+        attributes: ['startDate', 'endDate']
+    });
+    if (endDateCheck.getTime() <= startDateCheck.getTime()) {
+        res.statusCode = 400;
+        res.json({ message: "Validation error", endDate: "endDate cannot be on or before startDate" })
+    };
+    if (endDateCheck.getTime() < Date.now() || startDateCheck.getTime() < Date.now()) {
         res.statusCode = 403;
         res.json({
             "message": "Past bookings can't be modified",
             "statusCode": 403
         });
-    }
+    };
+    for (let booking of allDates) {
+        const dateObjs = booking.dataValues;
+        if (startDateCheck.getTime() === new Date(`${dateObjs.startDate}`).getTime()) {
+            res.statusCode = 403;
+            res.json({ "message": "Sorry, this spot is already booked for the specified dates", startDate: "Start date conflicts with an existing booking" })
+        }
+        if (endDateCheck.getTime() === new Date(`${dateObjs.endDate}`).getTime()) {
+            res.statusCode = 403;
+            res.json({ "message": "Sorry, this spot is already booked for the specified dates", startDate: "End date conflicts with an existing booking" })
+        }
+    };
     const foundBooking = await Booking.findByPk(req.params.bookingId);
     if (foundBooking && foundBooking.userId === req.user.id) {
         await foundBooking.update({
