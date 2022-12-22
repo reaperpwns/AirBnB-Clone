@@ -5,6 +5,7 @@ const { Spot, Review, Booking, SpotImage, ReviewImage, User } = require('../../d
 const { check } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
 const { requireAuth } = require('../../utils/auth');
+const { Op } = require('sequelize');
 
 const validateSpot = [
     check('address')
@@ -304,101 +305,134 @@ router.post('/', requireAuth, validateSpot, async (req, res) => {
 
 router.get('/', handleValidationErrors, async (req, res, next) => {
     let { page, size, maxLat, minLat, minLng, maxLng, minPrice, maxPrice } = req.query;
-    const errors = {
-        page: "Page must be greater than or equal to 1",
-        size: "Size must be greater than or equal to 1",
-        maxLat: "Maximum latitude is invalid",
-        minLat: "Minimum latitude is invalid",
-        minLng: "Maximum longitude is invalid",
-        maxLng: "Minimum longitude is invalid",
-        minPrice: "Maximum price must be greater than or equal to 0",
-        maxPrice: "Minimum price must be greater than or equal to 0"
+    const where = {};
+
+    if (page) {
+        if (page < 1 || isNaN(page)) {
+            res.statusCode = 400;
+            res.json({
+                message: "Validation Error",
+                statusCode: 400,
+                error: "Page must be greater than or equal to 1"
+            })
+        } if (page > 10) page = 10;
+    } else {
+        page = 1;
+    };
+    if (size) {
+        if (size < 1 || isNaN(size)) {
+            res.statusCode = 400;
+            res.json({
+                message: "Validation Error",
+                statusCode: 400,
+                error: "Size must be greater than or equal to 1"
+            });
+        }
+    } else {
+        size = 20;
+    }
+    if (maxLat) {
+        if (isNaN(maxLat)) {
+            res.statusCode = 400;
+            res.json({
+                message: "Validation Error",
+                statusCode: 400,
+                error: "Maximum latitude is invalid"
+            });
+        } if (maxLat < minLat) {
+            res.statusCode = 400;
+            res.json({
+                message: "Validation Error",
+                statusCode: 400,
+                error: "Maximum latitude is invalid"
+            });
+        } if (!where.maxLat) where.lat = {};
+        where.lat[Op.lte] = maxLat
+    }
+    if (minLat) {
+        if (isNaN(minLat)) {
+            res.statusCode = 400;
+            res.json({
+                message: "Validation Error",
+                statusCode: 400,
+                error: "Minimum latitude is invalid"
+            });
+        } if (!where.minLat) where.lat = {};
+        where.lat[Op.gte] = minLat
+    };
+    if (minLng) {
+        if (isNaN(minLng)) {
+            res.statusCode = 400;
+            res.json({
+                message: "Validation Error",
+                statusCode: 400,
+                error: "Minimum longitude is invalid"
+            });
+        } if (!where.lng) where.lng = {};
+        where.lng[Op.gte] = minLng;
+    };
+    if (maxLng) {
+        if (isNaN(maxLng)) {
+            res.statusCode = 400;
+            res.json({
+                message: "Validation Error",
+                statusCode: 400,
+                error: "Maximum longitude is invalid"
+            })
+        } if (!where.lng) where.lng = {};
+        where.lng[Op.lte] = maxLng;
+    };
+    if (minPrice) {
+        if (isNaN(minPrice) || minPrice < 1) {
+            res.statusCode = 400;
+            res.json({
+                message: "Validation Error",
+                statusCode: 400,
+                error: "Minimum price must be greater than or equal to 0"
+            });
+        } if (!where.price) where.price = {};
+        where.price[Op.gte] = minPrice
+    };
+    if (maxPrice) {
+        if (isNaN(maxPrice) || maxPrice < 1) {
+            res.statusCode = 400;
+            res.json({
+                message: "Validation Error",
+                statusCode: 400,
+                error: "Maximum price must be greater than or equal to 0"
+            });
+        } if (!where.price) where.price = {};
+        where.price[Op.lte] = maxPrice
     };
 
-    page = parseInt(page);
-    size = parseInt(size);
-    maxLat = parseFloat(maxLat);
-    minLat = parseFloat(minLat);
-    minLng = parseFloat(minLng);
-    maxLng = parseFloat(maxLng);
-    minPrice = parseInt(minPrice);
-    maxPrice = parseInt(maxPrice);
-
-    console.log(maxLat)
-
-    if (Number.isNaN(page)) page = 1;
-    if (Number.isNaN(size)) size = 20;
-    // if (page < 1) {
-    //     res.statusCode = 400;
-    //     res.json({
-    //         message: "Validation Error",
-    //         statusCode: 400,
-    //         error: errors.page
-    //     })
-    // };
-    // if (size < 1) {
-    //     res.statusCode = 400;
-    //     res.json({
-    //         message: "Validation Error",
-    //         statusCode: 400,
-    //         error: errors.size
-    //     })
-    // };
-    // if (maxLat) {
-    //     if (Number.isNaN(maxLat)) {
-    //         res.statusCode = 400;
-    //         res.json({
-    //             message: "Validation Error",
-    //             statusCode: 400,
-    //             error: errors.maxLat
-    //         })
-    //     };
-    // }
-    // if (Number.isNaN(minLat)) {
-    //     res.statusCode = 400;
-    //     res.json({
-    //         message: "Validation Error",
-    //         statusCode: 400,
-    //         error: errors.minLat
-    //     })
-    // };
-    // if (minLng && minLng === '') {
-    //     res.statusCode = 400;
-    //     res.json({
-    //         message: "Validation Error",
-    //         statusCode: 400,
-    //         error: errors.minLng
-    //     })
-    // };
-    // if (maxLng && maxLng === '') {
-    //     res.statusCode = 400;
-    //     res.json({
-    //         message: "Validation Error",
-    //         statusCode: 400,
-    //         error: errors.maxLng
-    //     })
-    // };
-    if (page > 10) size = 10;
-    if (size > 20) size = 20;
-
-    const Spots = await Spot.findAll({
+    const spotArr = await Spot.findAll({
+        where,
+        include: [{
+            model: SpotImage
+        }, {
+            model: Review
+        }],
         limit: size,
         offset: (page - 1) * size
     });
-    for (const spot of Spots) {
-        const spotImg = await SpotImage.findOne({
-            where: {
-                spotId: spot.dataValues.id
+    const Spots = [];
+    spotArr.forEach(spot => {
+        Spots.push(spot.toJSON());
+    })
+    Spots.forEach(spot => {
+        spot.Reviews.forEach(review => {
+            if (review.stars) {
+                spot.avgRating = review.stars
             }
         });
-        const spotRating = await Review.findOne({
-            where: {
-                spotId: spot.dataValues.id
+        spot.SpotImages.forEach(image => {
+            if (image.url) {
+                spot.previewImage = image.url
             }
         });
-        spot.dataValues.avgRating = spotRating.dataValues.stars
-        spot.dataValues.previewImage = spotImg.dataValues.url
-    }
+        delete spot.Reviews;
+        delete spot.SpotImages;
+    });
     res.json({ Spots, page, size });
 });
 
