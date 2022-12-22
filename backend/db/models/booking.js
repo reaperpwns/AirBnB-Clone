@@ -23,8 +23,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       references: { model: 'User' }
     },
-    startDate: DataTypes.DATE,
-    endDate: DataTypes.DATE
+    startDate: DataTypes.DATEONLY,
+    endDate: DataTypes.DATEONLY
   }, {
     sequelize,
     modelName: 'Booking',
