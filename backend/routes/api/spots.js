@@ -331,6 +331,8 @@ router.get('/', handleValidationErrors, async (req, res, next) => {
         } else {
             size = 20;
         }
+    } else {
+        size = 20;
     }
     if (maxLat) {
         if (isNaN(maxLat)) {
