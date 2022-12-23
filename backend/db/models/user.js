@@ -41,7 +41,7 @@ module.exports = (sequelize, DataTypes) => {
     }
     static associate(models) {
       User.hasMany(models.Booking, { foreignKey: 'userId' });
-      User.hasMany(models.Spot, { foreignKey: 'ownerId' });
+      User.hasMany(models.Spot, { foreignKey: 'ownerId', as: 'Owner' });
       User.hasMany(models.Review, { foreignKey: 'userId' });
     }
   };
@@ -94,10 +94,13 @@ module.exports = (sequelize, DataTypes) => {
       },
       scopes: {
         currentUser: {
-          attributes: { exclude: ["hashedPassword"] }
+          attributes: { exclude: ["hashedPassword", 'updatedAt', 'createdAt'] }
         },
         loginUser: {
           attributes: {}
+        },
+        owner: {
+          attributes: { exclude: ['username', 'email', 'hashedPassword', 'createdAt', 'updatedAt'] }
         }
       }
     }
