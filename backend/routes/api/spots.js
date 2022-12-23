@@ -49,6 +49,29 @@ const validateReview = [
     handleValidationErrors
 ];
 
+router.get('/current', requireAuth, async (req, res) => {
+    const Spots = await Spot.findAll({
+        where: {
+            ownerId: req.user.id
+        }
+    });
+    for (const spot of Spots) {
+        const spotImg = await SpotImage.findOne({
+            where: {
+                spotId: spot.dataValues.id
+            }
+        });
+        const spotRating = await Review.findOne({
+            where: {
+                spotId: spot.dataValues.id
+            }
+        });
+        spot.dataValues.avgRating = spotRating.dataValues.stars
+        spot.dataValues.previewImage = spotImg.dataValues.url
+    }
+    res.json({ Spots });
+});
+
 router.get('/:spotId/bookings', requireAuth, async (req, res) => {
     const foundSpot = await Spot.findByPk(req.params.spotId);
     if (foundSpot) {
@@ -146,28 +169,6 @@ router.get('/:spotId/reviews', requireAuth, async (req, res) => {
     }
 });
 
-router.get('/current', requireAuth, async (req, res) => {
-    const Spots = await Spot.findAll({
-        where: {
-            ownerId: req.user.id
-        }
-    });
-    for (const spot of Spots) {
-        const spotImg = await SpotImage.findOne({
-            where: {
-                spotId: spot.dataValues.id
-            }
-        });
-        const spotRating = await Review.findOne({
-            where: {
-                spotId: spot.dataValues.id
-            }
-        });
-        spot.dataValues.avgRating = spotRating.dataValues.stars
-        spot.dataValues.previewImage = spotImg.dataValues.url
-    }
-    res.json({ Spots });
-});
 
 router.post('/:spotId/reviews', requireAuth, validateReview, async (req, res) => {
     const { review, stars } = req.body;
@@ -181,7 +182,7 @@ router.post('/:spotId/reviews', requireAuth, validateReview, async (req, res) =>
         if (userReview.userId !== req.user.id) {
             const newReview = await Review.create({
                 userId: req.user.id,
-                spotId: req.params.spotId,
+                spotId: +req.params.spotId,
                 review: review,
                 stars: stars
             });
@@ -327,9 +328,9 @@ router.get('/', handleValidationErrors, async (req, res, next) => {
                 statusCode: 400,
                 error: "Size must be greater than or equal to 1"
             });
+        } else {
+            size = 20;
         }
-    } else {
-        size = 20;
     }
     if (maxLat) {
         if (isNaN(maxLat)) {
@@ -433,6 +434,8 @@ router.get('/', handleValidationErrors, async (req, res, next) => {
         delete spot.Reviews;
         delete spot.SpotImages;
     });
+    page = +page;
+    size = +size;
     res.json({ Spots, page, size });
 });
 

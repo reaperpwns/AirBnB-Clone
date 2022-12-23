@@ -13,7 +13,7 @@ router.get('/current', requireAuth, async (req, res) => {
         include: {
             model: Spot,
             attributes: {
-                exclude: ['updatedAt', 'createdAt']
+                exclude: ['description', 'updatedAt', 'createdAt']
             }
         }
     });
@@ -71,9 +71,8 @@ router.put('/:bookingId', requireAuth, async (req, res) => {
 
 router.delete('/:bookingId', requireAuth, async (req, res) => {
     const foundBooking = await Booking.findByPk(req.params.bookingId);
-    const bookingDate = new Date(`${foundBooking.dataValues.startDate}`);
-    console.log(bookingDate.getTime(), Date.now());
     if (foundBooking && foundBooking.userId === req.user.id) {
+        const bookingDate = new Date(`${foundBooking.dataValues.startDate}`);
         if (bookingDate.getTime() > Date.now()) {
             await foundBooking.destroy();
             res.statusCode = 200;

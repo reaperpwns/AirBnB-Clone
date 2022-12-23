@@ -35,7 +35,8 @@ router.post('/:reviewId/images', requireAuth, async (req, res) => {
             reviewId: foundReview.id,
             url: url
         });
-        res.json(newImage);
+        const foundImg = await ReviewImage.scope('clean').findByPk(newImage.id)
+        res.json(foundImg);
     } else {
         res.statusCode = 404;
         res.json({
