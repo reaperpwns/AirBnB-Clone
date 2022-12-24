@@ -259,7 +259,7 @@ router.get('/:spotId', async (req, res) => {
     rows.forEach(row => {
         rowArr.push(row.toJSON())
     })
-    if (foundSpot) {
+    if (foundSpot[0]) {
         foundSpot[0].numReviews = count
         foundSpot[0].avgStarRating = rowArr[0].stars
         res.json(foundSpot);
