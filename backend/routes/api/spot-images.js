@@ -7,9 +7,9 @@ const { requireAuth } = require('../../utils/auth');
 
 router.delete('/:imageId', requireAuth, async (req, res) => {
     let foundImg = await SpotImage.findByPk(req.params.imageId);
-    foundImg = foundImg.toJSON();
     if (foundImg) {
-        const foundSpot = await Spot.findByPk(foundImg.spotId);
+        const newImg = foundImg.toJSON();
+        const foundSpot = await Spot.findByPk(newImg.spotId);
         if (foundSpot.ownerId === req.user.id) {
             await foundImg.destroy();
             res.statusCode = 200;

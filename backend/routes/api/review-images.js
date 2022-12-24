@@ -7,18 +7,18 @@ const { requireAuth } = require('../../utils/auth');
 
 router.delete('/:imageId', requireAuth, async (req, res) => {
     let foundImg = await ReviewImage.findByPk(req.params.imageId);
-    const foundReview = await Review.findByPk(foundImg.dataValues.reviewId);
-    foundImg = foundImg.toJSON()
-    if (foundImg[0] && foundReview.userId === req.user.id) {
+    const newImg = foundImg.toJSON();
+    const foundReview = await Review.findByPk(newImg[0].reviewId);
+    if (newImg[0] && foundReview.userId === req.user.id) {
         await foundImg.destroy();
         res.statusCode = 200;
-        res.json({
+        return res.json({
             "message": "Successfully deleted",
             "statusCode": 200
         })
     } else {
         res.statusCode = 404;
-        res.json({
+        return res.json({
             "message": "Review Image couldn't be found",
             "statusCode": 404
         })
