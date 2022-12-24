@@ -83,9 +83,9 @@ router.get('/current', requireAuth, async (req, res) => {
 });
 
 router.get('/:spotId/bookings', requireAuth, async (req, res) => {
-    const foundSpot = await Spot.findByPk(req.params.spotId);
+    const foundSpot = await Spot.findByPk(+req.params.spotId);
     if (foundSpot) {
-        if (foundSpot.ownerId === +req.user.id) {
+        if (+foundSpot.ownerId === +req.user.id) {
             const Bookings = await Booking.findAll({
                 where: {
                     userId: foundSpot.ownerId
