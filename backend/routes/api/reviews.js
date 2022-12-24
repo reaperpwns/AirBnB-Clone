@@ -82,7 +82,8 @@ router.delete('/:reviewId', requireAuth, async (req, res) => {
 });
 
 router.get('/current', requireAuth, async (req, res) => {
-    const Reviews = await Review.findAll({
+    const Reviews = [];
+    const reviewArr = await Review.findAll({
         where: {
             userId: req.user.id
         },
@@ -91,20 +92,22 @@ router.get('/current', requireAuth, async (req, res) => {
         },
         {
             model: Spot,
+            include: {
+                model: SpotImage
+            },
             attributes: { exclude: ['description', 'updatedAt', 'createdAt'] }
         },
         {
             model: ReviewImage.scope('clean')
         }],
     });
-    for (const Review of Reviews) {
-        const imageUrl = await SpotImage.findOne({
-            where: {
-                spotId: Review.dataValues.Spot.id
-            }
-        })
-        Review.dataValues.Spot.dataValues.previewImage = imageUrl.url
-    }
+    reviewArr.forEach(review => {
+        Reviews.push(review.toJSON())
+    })
+    Reviews.forEach(review => {
+        review.Spot.previewImage = review.Spot.SpotImages[0].url
+        delete review.Spot.SpotImages
+    })
     res.json({ Reviews });
 });
 

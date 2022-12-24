@@ -50,25 +50,35 @@ const validateReview = [
 ];
 
 router.get('/current', requireAuth, async (req, res) => {
-    const Spots = await Spot.findAll({
+    const Spots = [];
+    const spotArr = await Spot.findAll({
         where: {
             ownerId: req.user.id
-        }
+        },
+        include: [{
+            model: Review
+        },
+        {
+            model: SpotImage
+        }]
     });
-    for (const spot of Spots) {
-        const spotImg = await SpotImage.findOne({
-            where: {
-                spotId: spot.dataValues.id
+    spotArr.forEach(spot => {
+        Spots.push(spot.toJSON())
+    })
+    Spots.forEach(spot => {
+        spot.Reviews.forEach(review => {
+            if (review.stars) {
+                spot.avgRating = review.stars
             }
         });
-        const spotRating = await Review.findOne({
-            where: {
-                spotId: spot.dataValues.id
+        spot.SpotImages.forEach(image => {
+            if (image.url) {
+                spot.previewImage = image.url
             }
-        });
-        spot.dataValues.avgRating = spotRating.dataValues.stars
-        spot.dataValues.previewImage = spotImg.dataValues.url
-    }
+        })
+        delete spot.Reviews
+        delete spot.SpotImages
+    });
     res.json({ Spots });
 });
 
@@ -222,12 +232,17 @@ router.post('/:spotId/images', requireAuth, async (req, res) => {
 });
 
 router.get('/:spotId', async (req, res) => {
+    const foundSpot = [];
+    const rowArr = [];
     const { count, rows } = await Review.findAndCountAll({
         where: {
             spotId: req.params.spotId
         }
     })
-    const foundSpot = await Spot.findByPk(req.params.spotId, {
+    const foundSpotArr = await Spot.findAll({
+        where: {
+            id: req.params.spotId
+        },
         include: [
             {
                 model: SpotImage.scope('clean'),
@@ -238,9 +253,15 @@ router.get('/:spotId', async (req, res) => {
                 as: 'Owner',
             }],
     });
+    foundSpotArr.forEach(spot => {
+        foundSpot.push(spot.toJSON());
+    });
+    rows.forEach(row => {
+        rowArr.push(row.toJSON())
+    })
     if (foundSpot) {
-        foundSpot.dataValues.numReviews = count;
-        foundSpot.dataValues.avgStarRating = rows[0].dataValues.stars;
+        foundSpot[0].numReviews = count
+        foundSpot[0].avgStarRating = rowArr[0].stars
         res.json(foundSpot);
     } else {
         res.statusCode = 404;

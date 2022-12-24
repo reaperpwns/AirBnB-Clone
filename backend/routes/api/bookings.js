@@ -6,21 +6,28 @@ const { handleValidationErrors } = require('../../utils/validation');
 const { requireAuth } = require('../../utils/auth');
 
 router.get('/current', requireAuth, async (req, res) => {
-    const Bookings = await Booking.findAll({
+    const Bookings = [];
+    const bookingArr = await Booking.findAll({
         where: {
             userId: req.user.id
         },
         include: {
             model: Spot,
+            include: {
+                model: SpotImage
+            },
             attributes: {
                 exclude: ['description', 'updatedAt', 'createdAt']
             }
         }
     });
-    for (let spot of Bookings) {
-        const foundImg = await SpotImage.findByPk(spot.dataValues.Spot.id);
-        spot.dataValues.Spot.dataValues.previewImage = foundImg.url;
-    }
+    bookingArr.forEach(booking => {
+        Bookings.push(booking.toJSON())
+    });
+    Bookings.forEach(booking => {
+        booking.Spot.previewImage = booking.Spot.SpotImages[0].url
+        delete booking.Spot.SpotImages
+    })
     res.json({ Bookings });
 });
 
