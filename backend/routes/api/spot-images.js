@@ -6,9 +6,10 @@ const { handleValidationErrors } = require('../../utils/validation');
 const { requireAuth } = require('../../utils/auth');
 
 router.delete('/:imageId', requireAuth, async (req, res) => {
-    const foundImg = await SpotImage.findByPk(req.params.imageId);
+    let foundImg = await SpotImage.findByPk(req.params.imageId);
+    foundImg = foundImg.toJSON();
     if (foundImg) {
-        const foundSpot = await Spot.findByPk(foundImg.dataValues.spotId);
+        const foundSpot = await Spot.findByPk(foundImg.spotId);
         if (foundSpot.ownerId === req.user.id) {
             await foundImg.destroy();
             res.statusCode = 200;

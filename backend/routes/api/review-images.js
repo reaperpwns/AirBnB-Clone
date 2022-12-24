@@ -6,9 +6,10 @@ const { handleValidationErrors } = require('../../utils/validation');
 const { requireAuth } = require('../../utils/auth');
 
 router.delete('/:imageId', requireAuth, async (req, res) => {
-    const foundImg = await ReviewImage.findByPk(req.params.imageId);
+    let foundImg = await ReviewImage.findByPk(req.params.imageId);
     const foundReview = await Review.findByPk(foundImg.dataValues.reviewId);
-    if (foundImg && foundReview.userId === req.user.id) {
+    foundImg = foundImg.toJSON()
+    if (foundImg[0] && foundReview.userId === req.user.id) {
         await foundImg.destroy();
         res.statusCode = 200;
         res.json({
